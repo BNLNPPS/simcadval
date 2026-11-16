@@ -1,0 +1,53 @@
+<!-- MiniSiD: trimmed SiD (DD4hep DDDetectors) for the ray/point sampling comparison.
+     Beampipe (polycones + rotated tubes), Si vertex barrel (boxes, rotated modules),
+     ECal barrel (12-fold trapezoidal staves, 31 layers x 4-6 thin slices).
+     World 6.5 m half-length: smallest that contains the crossing-angle beampipes
+     (TGeo overlap check clean); use the box option to focus points/rays on the detector. -->
+<lccdd>
+  <info name="MiniSiD" title="Trimmed SiD for ray/point sampling comparison" author="simcadval" status="development" version="1">
+    <comment>Subset of DD4hep/DDDetectors/compact/SiD.xml</comment>
+  </info>
+
+  <includes>
+    <gdmlFile ref="${DD4hepINSTALL}/DDDetectors/compact/elements.xml"/>
+    <gdmlFile ref="${DD4hepINSTALL}/DDDetectors/compact/materials.xml"/>
+  </includes>
+
+  <define>
+    <include ref="SiDConstants.xml"/>
+  </define>
+
+  <limits>
+    <include ref="${DD4hepINSTALL}/DDDetectors/compact/SiD_Limits.xml"/>
+  </limits>
+
+  <display>
+    <vis name="InvisibleNoDaughters"   showDaughters="false" visible="false"/>
+    <vis name="InvisibleWithDaughters" showDaughters="true"  visible="false"/>
+    <vis name="GreenVis" alpha="1" r="0.0" g="1.0" b="0.0" showDaughters="true" visible="true"/>
+    <vis name="RedVis"   alpha="1" r="1.0" g="0.0" b="0.0" showDaughters="true" visible="true"/>
+    <vis name="BlueVis"  alpha="1" r="0.0" g="0.0" b="1.0" showDaughters="true" visible="true"/>
+  </display>
+
+  <include ref="${DD4hepINSTALL}/DDDetectors/compact/SiD/SiD_Materials.xml"/>
+
+  <include ref="${DD4hepINSTALL}/DDDetectors/compact/SiD/SiD_VertexConfig.xml"/>
+  <include ref="${DD4hepINSTALL}/DDDetectors/compact/SiD/SiD_VertexBarrel.xml"/>
+
+  <display>
+    <vis name="EcalBarrelVis"    alpha="1.0" r="1.0" g="1.0" b="0.0" showDaughters="true"  visible="false"/>
+    <vis name="EcalStaveVis"     alpha="1.0" r="0.0" g="0.0" b="1.0" showDaughters="true"  visible="true"/>
+    <vis name="EcalLayerVis"     alpha="1.0" r="0.8" g="0.8" b="0.0" showDaughters="true"  visible="true"/>
+    <vis name="EcalSensitiveVis" alpha="1.0" r="0.7" g="0.3" b="0.0" showDaughters="false" visible="true"/>
+    <vis name="EcalAbsorberVis"  alpha="1.0" r="0.4" g="0.4" b="0.0" showDaughters="false" visible="true"/>
+  </display>
+  <readouts>
+    <readout name="EcalBarrelHits">
+      <segmentation type="CartesianGridXY" grid_size_x="3.5*mm" grid_size_y="3.5*mm"/>
+      <id>system:8,barrel:3,module:4,layer:6,slice:5,x:32:-16,y:-16</id>
+    </readout>
+  </readouts>
+  <include ref="${DD4hepINSTALL}/DDDetectors/compact/SiD/SiD_EcalBarrel.xml"/>
+
+  <include ref="${DD4hepINSTALL}/DDDetectors/compact/SiD/SiD_Beampipe.xml"/>
+</lccdd>
