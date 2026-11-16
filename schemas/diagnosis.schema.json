@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/BNLNPPS/simcadval/schemas/diagnosis.schema.json",
+  "title": "simcadval diagnosis",
+  "description": "What differs between World A (DD4hep, reference) and World B (STEP via G4OCCT, candidate) in one simcadval case, where, by how much, and the evidence. Written by an investigating agent through svtool submit_diagnosis, which checks it against this schema and the case, then renders diagnosis.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "case", "verdict", "findings"],
+  "properties": {
+    "schema": {"const": "simcadval-diagnosis/1"},
+    "case": {"type": "string", "description": "Case directory, e.g. out/minisid_ip."},
+    "verdict": {"type": "string", "minLength": 10, "description": "The conclusion in one sentence."},
+    "findings": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per mismatch family with a single cause. A 'no_difference' finding stands alone.",
+      "items": {"$ref": "#/$defs/finding"}
+    },
+    "unexplained": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Mismatch not covered by any finding.",
+      "properties": {
+        "share_of_mismatch": {"type": "number", "minimum": 0, "maximum": 1},
+        "notes": {"type": "string"}
+      }
+    },
+    "next_steps": {"type": "array", "items": {"type": "string"}, "description": "What would settle the open points."},
+    "agent": {
+      "type": "object",
+      "description": "Who wrote this diagnosis (for evaluation records).",
+      "properties": {"name": {"type": "string"}, "model": {"type": "string"}}
+    }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "parts", "share_of_mismatch", "confidence", "evidence"],
+      "properties": {
+        "category": {
+          "enum": ["placement", "material", "missing_part", "extra_part", "navigation_artifact", "no_difference", "unclear"],
+          "description": "placement: a part is shifted, rotated or the wrong size in B. material: a part has the wrong material in B. missing_part: a part of A is absent in B. extra_part: B has a part A lacks. navigation_artifact: B's shapes are right but G4OCCT navigates them wrongly. no_difference: the worlds agree at floating-point level. unclear: the evidence does not separate the categories."
+        },
+        "parts": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[^@\\s]+@([0-9]+|\\*)$"},
+          "description": "Affected parts as <volume>@<id> (export ids), or <volume>@* for every part with that volume name. Empty only for no_difference."
+        },
+        "materials": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["a", "b"],
+          "description": "The material transition this finding explains: what A has and what B has instead.",
+          "properties": {"a": {"type": "string"}, "b": {"type": "string"}}
+        },
+        "share_of_mismatch": {
+          "type": "number", "minimum": 0, "maximum": 1,
+          "description": "Fraction of the case's ray mismatch length that this finding explains."
+        },
+        "magnitude": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Size of the effect. summary is free text; the other fields are optional and machine-readable.",
+          "properties": {
+            "summary": {"type": "string"},
+            "mismatch_length_mm": {"type": "number", "minimum": 0},
+            "displacement_mm": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3,
+                                "description": "placement: translation D of the part in B relative to A, global frame."},
+            "rotation_mrad": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3,
+                              "description": "placement: small rotation vector of the part in B relative to A, global frame."},
+            "boundary_shift_mm": {"type": "number", "description": "placement: typical shift of the part's boundaries along rays."},
+            "material_b": {"type": "string", "description": "material: the material B assigns to the part(s)."}
+          }
+        },
+        "confidence": {"enum": ["high", "medium", "low"]},
+        "explanation": {"type": "string", "description": "Why this category: how the evidence rules out the others."},
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["call", "shows"],
+            "properties": {
+              "call": {"type": "string", "pattern": "^c[0-9]{3,}$", "description": "id of an svtool call of this investigation (calls.jsonl)."},
+              "shows": {"type": "string", "minLength": 3, "description": "the values or lines of that call's output that support the finding."}
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -30,7 +30,8 @@ flowchart TD
     M["compare.py<br/>metrics, plots, mismatch CSVs"]
   end
   T["triage.py<br/>rules and failure modes"]
-  R["show_ray.py, simcadval_scan --debug-ray<br/>replay one ray"]
+  V["svtool.py<br/>families, replays, shift fits, rescans"]
+  D["diagnosis.json + diagnosis.md<br/>checked against a schema"]
   C --> O
   C --> E --> S --> B
   C --> A
@@ -38,7 +39,9 @@ flowchart TD
   Q -.-> B
   A --> M
   B --> M
-  M -->|worlds disagree| T --> R
+  M -->|worlds disagree| V --> D
+  V -.->|runs| T
+  V -.->|aimed rescan| RC
 ```
 
 ## Quick start
@@ -101,9 +104,18 @@ half-thickness ≤ 0.155 mm whose placement is rotated more than 29° off the
 two failure modes (Kapton → Air and Copper → Air), each with ready commands
 to replay a representative ray.
 
-**5. Diagnosis (optional, with [Claude Code](https://claude.com/claude-code)).**
-The repo ships a Claude Code skill, `investigate-mismatch`. Ask Claude Code in
-this directory to "investigate the mismatch in out/minisid". It follows
+**5. Diagnosis.** `scripts/svtool.py` holds the investigation tools: each
+takes named arguments and prints one JSON object, so a person, Claude Code or
+any other agent can use them (Reference, Investigation tools). For example,
+every mismatch family of the case, and what its boundaries say about the cause:
+
+```bash
+scripts/svtool.py mismatch_families --case out/minisid
+```
+
+The repo also ships a Claude Code skill, `investigate-mismatch`. Ask
+[Claude Code](https://claude.com/claude-code) in this directory to "investigate
+the mismatch in out/minisid". It follows
 `.claude/skills/investigate-mismatch/SKILL.md`: reads the metrics and the
 triage report, replays rays, runs targeted rescans if needed, and writes
 `out/minisid/cmp/diagnosis.md`. That file sorts each finding into placement,
@@ -290,6 +302,46 @@ confirm them with a replay. Options: `--min-mm`, `--neg-ratio`, `--max-pos`,
 `--depth`, `--max-k`, `--min-pos` (below this many positive steps, all of them
 are listed instead of analysed), `--seed`, `--out`, `--no-plots`.
 
+### Investigation tools (`svtool.py`)
+
+`scripts/svtool.py TOOL --arg value ...` or `scripts/svtool.py call TOOL
+'{"arg": ...}'`. Outside the container it re-runs itself through `eic.sh`.
+`scripts/svtool.py spec [--format openai]` prints the tool definitions
+(name, description, JSON Schema of the arguments) for an agent. Each call on a
+case is logged with an id to `CASE/investigation/calls.jsonl`, and library
+output goes to `CASE/investigation/svtool.log`, so stdout is only JSON.
+
+| Tool | What it returns |
+|---|---|
+| `case_summary` | headline metrics, worst parts, robustness counters, export status, a no-difference test |
+| `mismatch_families` | mismatching ray length grouped by (material A → B, volume A, volume B): share, parts, region, example intervals, and the boundary pattern (below) |
+| `point_mismatches` | points with different materials, grouped the same way |
+| `ray` | one ray as the exact overlay of both worlds, marking which world has a boundary at each row |
+| `debug_ray` | `simcadval_scan --debug-ray` parsed: what each nearby STEP part answers at each step point |
+| `material_map` | the STEP world's material map against the DD4hep material of every part |
+| `part_info` | export record of a part and its placements (global bounding box, translation, rotation) |
+| `boundary_shifts` | boundaries matched across worlds (exact, shifted, lost), face normals from TGeo, and fits of the displacement D (translation, or translation + small rotation, overall or per placement) |
+| `rescan` | `run_case.sh` with rays aimed at a box, reusing the case's STEP and map, into `CASE/investigation/NAME` (itself a case) |
+| `triage` | `triage.py` output, condensed |
+| `submit_diagnosis` | checks a diagnosis (schema, cited call ids, part names, shares) and writes `cmp/diagnosis.json` and `diagnosis.md` |
+
+The boundary pattern of a family compares the interval ends with the step
+boundaries of each world. `same_boundaries`: only the material differs, either
+a wrong material or navigation that walks the part as the world. `only_in_a`:
+B lacks the part's faces, so the part is missing. `only_in_b`: an extra part in
+B. `one_end_each`: a boundary moved, i.e. a placement or size difference. For moved
+boundaries, `boundary_shifts` uses that a face with normal n moved by D shifts
+the boundary along a ray with direction u by Δs = (D·n)/(u·n). Each ray
+through the face therefore gives one equation D·n = Δs (u·n), and the least-squares
+fit reports D along the face normals that were sampled.
+
+A diagnosis (`schemas/diagnosis.schema.json`, `simcadval-diagnosis/1`) has a
+one-sentence verdict and one finding per cause: category, parts
+(`name@id` or `name@*`), materials A → B, share of the mismatch length,
+magnitude (summary, and optionally displacement, rotation, boundary shift or
+B's material), confidence, explanation, and evidence as
+`{call id, what its output shows}`.
+
 ### Layout
 
 | Path | What |
@@ -307,6 +359,8 @@ are listed instead of analysed), `--seed`, `--out`, `--no-plots`.
 | `examples/MiniSiD.xml` | trimmed DD4hep SiD: beampipe, Si vertex barrel, 12-stave ECal barrel |
 | `examples/Slabs.xml` | seven thin touching rotated slabs (smoke test) |
 | `eic.sh` | runs a command in the `eic_xl` container |
+| `scripts/svtool.py` | investigation tools (JSON in, JSON out) and the diagnosis checker/renderer |
+| `schemas/diagnosis.schema.json` | the diagnosis format |
 | `.claude/skills/investigate-mismatch/` | Claude Code skill: diagnose a case's mismatch and write `diagnosis.md` |
 
 ## License
