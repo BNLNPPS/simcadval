@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
 // simcadval_scan: geantino ray scan + navigator point sampling of ONE world,
 // built either from a DD4hep compact file (DDG4 Geant4Converter, exactly what
 // ddsim does) or from a STEP assembly (G4OCCTAssemblyVolume). Run it once per

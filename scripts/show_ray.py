@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: LGPL-3.0-or-later
 """Side-by-side step listing of one ray in two scans.
     show_ray.py A_PREFIX B_PREFIX EVT [s_min s_max] [--report X.step.json]"""
 import argparse

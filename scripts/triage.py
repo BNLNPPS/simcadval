@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: LGPL-3.0-or-later
 """Mismatch triage: which geometric conditions predict a DD4hep-vs-STEP disagreement?
 
     triage.py CASE_DIR [--out DIR] [--min-mm 1e-6] [--neg-ratio 20] [--depth 4] [--seed 1]

@@ -1,3 +1,7 @@
+<!-- SPDX-License-Identifier: LGPL-3.0-only
+     Copy of DD4hep DDDetectors/compact/SiDConstants.xml
+     (Copyright (C) CERN, LGPL-3.0, https://github.com/AIDASoft/DD4hep).
+     Modified 2026 for simcadval: world_side 30000*mm -> 6500*mm. -->
   <define>
     <constant name="world_side" value="6500*mm"/>
     <constant name="world_x" value="world_side"/>

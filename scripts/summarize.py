@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: LGPL-3.0-or-later
 """Markdown table of headline metrics across cases.  summarize.py out/CASE1/cmp out/CASE2/cmp ..."""
 import json
 import os

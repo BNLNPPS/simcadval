@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
 // dd4hep2step: export a DD4hep compact geometry to a STEP (AP214) assembly
 // with XDE material attributes. Export semantics are documented in
 // occt_writer.cc; the TGeo walk is in tgeo_reader.cc.

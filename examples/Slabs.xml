@@ -1,3 +1,4 @@
+<!-- SPDX-License-Identifier: LGPL-3.0-or-later -->
 <!-- Slabs: seven thin touching slabs (Si | Cu | Kapton | W | Si | Cu | Kapton, 50 um to 2.5 mm thick),
      rotated 0.3 rad about z and placed about 1.3 m from the axis like an ECal layer. A fast smoke test:
      DD4hep and STEP should agree to about 1e-9 of the non-world length (run command: README). -->

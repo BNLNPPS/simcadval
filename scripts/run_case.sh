@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: LGPL-3.0-or-later
 # Full chain for one case, run inside the eic container (see ../eic.sh):
 #   DD4hep compact --dd4hep2step--> STEP (+ materials.xml)
 #   simcadval_scan --world dd4hep (reference: DDG4 Geant4Converter)

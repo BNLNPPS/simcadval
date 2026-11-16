@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
 // OCCT side of dd4hep2step: neutral GeometryDesc -> XCAF document -> STEP.
 //
 // Export semantics (chosen so the STEP file encodes the same material map as

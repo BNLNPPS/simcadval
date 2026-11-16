@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: LGPL-3.0-or-later
 # Run a command inside the eic_xl container.
 # Usage: ./eic.sh '<bash command string>'      (override the image with EIC_IMG=...)
 #

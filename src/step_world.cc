@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 #include "step_world.hh"
 
 #include "geo_desc.hh"

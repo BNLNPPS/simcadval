@@ -308,3 +308,16 @@ are listed instead of analysed), `--seed`, `--out`, `--no-plots`.
 | `examples/Slabs.xml` | seven thin touching rotated slabs (smoke test) |
 | `eic.sh` | runs a command in the `eic_xl` container |
 | `.claude/skills/investigate-mismatch/` | Claude Code skill: diagnose a case's mismatch and write `diagnosis.md` |
+
+## License
+
+simcadval is licensed under the GNU Lesser General Public License, version 3
+or (at your option) any later version (`LGPL-3.0-or-later`). `COPYING.LESSER`
+holds the LGPL text, and `COPYING` holds the GNU GPL v3 text that the LGPL
+builds on.
+
+`examples/MiniSiD.xml` and `examples/SiDConstants.xml` are modified copies of
+DD4hep's SiD compact files (Copyright (C) CERN). DD4hep is licensed under
+LGPL-3.0 with no "or later" option, so these two files are `LGPL-3.0-only`.
+The header of each file says what was changed. The dependencies (Geant4, DD4hep, ROOT, OCCT,
+G4OCCT) keep their own licenses.

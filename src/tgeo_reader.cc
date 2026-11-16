@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
 // ROOT/DD4hep side of dd4hep2step: compact file -> neutral GeometryDesc.
 #include "geo_desc.hh"
 #include "geo_ids.hh"

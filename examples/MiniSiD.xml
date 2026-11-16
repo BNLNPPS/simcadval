@@ -1,3 +1,7 @@
+<!-- SPDX-License-Identifier: LGPL-3.0-only
+     Derived from DD4hep DDDetectors/compact/SiD.xml and the files it includes
+     (Copyright (C) CERN, LGPL-3.0, https://github.com/AIDASoft/DD4hep).
+     Modified 2026 for simcadval: trimmed to the parts listed below. -->
 <!-- MiniSiD: trimmed SiD (DD4hep DDDetectors) for the ray/point sampling comparison.
      Beampipe (polycones + rotated tubes), Si vertex barrel (boxes, rotated modules),
      ECal barrel (12-fold trapezoidal staves, 31 layers x 4-6 thin slices).

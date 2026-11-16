@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: LGPL-3.0-or-later
 """TGeo overlap/extrusion check of a DD4hep compact. Usage: check_overlaps.py compact.xml [tol_cm]"""
 import sys
 import ROOT

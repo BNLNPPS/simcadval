@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
 // STEP world construction (G4OCCT/OCCT translation unit), kept apart from the
 // DD4hep/ROOT translation unit; see geo_desc.hh for why.
 #pragma once

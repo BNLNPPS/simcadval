@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
 // Shared volume-numbering convention between dd4hep2step and simcadval_scan
 // (ROOT-side translation units only).
 //

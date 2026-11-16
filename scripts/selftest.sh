@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: LGPL-3.0-or-later
 # Metric self-test: deliberately wrong CAD must be detected and localised.
 # Run inside the eic container (see ../eic.sh) after building.
 #

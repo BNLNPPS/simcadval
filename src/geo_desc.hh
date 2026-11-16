@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
 // Neutral (std-only) geometry description passed between the ROOT/DD4hep
 // translation unit and the OCCT translation unit. ROOT's global Printf() and
 // OCCT's extern "C" Printf() cannot be declared in the same TU, and OCCT's
