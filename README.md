@@ -123,8 +123,8 @@ so air outside the detector does not dilute them.
 ## Mismatch triage (`triage.py`)
 
 `compare.py` says how much the worlds disagree and where. `triage.py` says
-what the disagreeing places have in common, so that a bug can be reduced to a
-single-solid repro. It post-processes the stored scans: there are no new
+what the disagreeing places have in common, so that a disagreement can be
+traced to specific parts and conditions. It post-processes the stored scans: there are no new
 scans, and it needs only CPU (numpy, scipy, ROOT/DD4hep). It takes about
 1–2 minutes for a 20 000-ray MiniSiD case.
 

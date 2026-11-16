@@ -5,7 +5,6 @@
 #include "G4OCCT/G4OCCTAssemblyVolume.hh"
 #include "G4OCCT/G4OCCTMaterialMap.hh"
 #include "G4OCCT/G4OCCTMaterialMapReader.hh"
-#include "G4OCCT/G4OCCTSolid.hh"
 
 #include <G4Box.hh>
 #include <G4LogicalVolume.hh>
@@ -34,13 +33,6 @@ G4VPhysicalVolume* BuildStepWorld(const std::string& stepPath, const std::string
   ids.emplace_back(worldLV, -1);
   for (const auto& [name, lv] : assembly->GetLogicalVolumes()) ids.emplace_back(lv, IdFromPartName(name));
   return new G4PVPlacement(nullptr, {}, worldLV, "simcadval_world", nullptr, false, 0);
-}
-
-int FreshOCCTInside(const G4VSolid* solid, double x, double y, double z) {
-  auto* occt = dynamic_cast<const G4OCCTSolid*>(solid);
-  if (occt == nullptr) return -1;
-  G4OCCTSolid fresh("fresh_" + occt->GetName(), occt->GetOCCTShape());
-  return static_cast<int>(fresh.Inside(G4ThreeVector(x, y, z)));
 }
 
 } // namespace simcadval

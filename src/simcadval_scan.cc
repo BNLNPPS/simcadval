@@ -354,7 +354,7 @@ std::string Esc(const std::string& s) {
 // Replay ray `evt` with a bare G4Navigator (same call pattern as G4Transportation
 // for a neutral particle) and, at every step start in [smin, smax], ask every
 // world daughter whose solid is near the point for Inside()/DistanceToIn().
-// Shows which solid query disagrees with the navigator's answer.
+// Shows which parts are at each step point and what their solids answer.
 void DebugRay(const State& s, long evt, double smin, double smax) {
   const Ray ray = MakeRay(s.opt, evt);
   G4Navigator nav;
@@ -381,15 +381,14 @@ void DebugRay(const State& s, long evt, double smin, double smax) {
         const double safe = so->DistanceToIn(lp);
         if (safe > 1.0) continue;
         const EInside in = so->Inside(lp);
-        const int fresh = simcadval::FreshOCCTInside(so, lp.x(), lp.y(), lp.z());
         auto jt = s.volId.find(d->GetLogicalVolume());
         G4ThreeVector bmin, bmax;
         so->BoundingLimits(bmin, bmax);
         std::printf("    local p=(%.15g, %.15g, %.15g)  bbox=(%.15g..%.15g, %.15g..%.15g, %.15g..%.15g)\n", lp.x(),
                     lp.y(), lp.z(), bmin.x(), bmax.x(), bmin.y(), bmax.y(), bmin.z(), bmax.z());
         auto inName = [](int e) { return e == kInside ? "INSIDE" : e == kSurface ? "SURFACE" : e == kOutside ? "outside" : "n/a"; };
-        std::printf("    %-32s id=%-4d %-8s fresh=%-8s safety=%.3e  DistIn(p,v)=%.9g  DistOut(p,v)=%.9g\n",
-                    d->GetName().c_str(), jt == s.volId.end() ? -2 : jt->second, inName(in), inName(fresh), safe,
+        std::printf("    %-32s id=%-4d %-8s safety=%.3e  DistIn(p,v)=%.9g  DistOut(p,v)=%.9g\n",
+                    d->GetName().c_str(), jt == s.volId.end() ? -2 : jt->second, inName(in), safe,
                     so->DistanceToIn(lp, lv), in == kOutside ? -1.0 : so->DistanceToOut(lp, lv));
         std::fflush(stdout);
       }

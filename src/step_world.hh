@@ -9,7 +9,6 @@
 class G4LogicalVolume;
 class G4Material;
 class G4VPhysicalVolume;
-class G4VSolid;
 
 namespace simcadval {
 
@@ -22,10 +21,5 @@ namespace simcadval {
 G4VPhysicalVolume* BuildStepWorld(const std::string& stepPath, const std::string& matMapXml, const double half[3],
                                   G4Material* worldMat,
                                   std::vector<std::pair<const G4LogicalVolume*, int>>& ids);
-
-// Debug aid: Inside() of a freshly constructed G4OCCTSolid with the same OCCT
-// shape as `solid` (no per-solid query history / caches). Returns -1 if
-// `solid` is not a G4OCCTSolid, else the EInside value.
-int FreshOCCTInside(const G4VSolid* solid, double x, double y, double z);
 
 } // namespace simcadval

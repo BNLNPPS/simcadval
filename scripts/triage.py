@@ -30,8 +30,8 @@ Analyses (numpy/scipy only):
      plus mismatch shape; k by silhouette, k=1 if no structure), each with its signature
      and a medoid ray to replay with show_ray.py / simcadval_scan --debug-ray.
 
-These are correlations in the reference frame. They suggest a repro; they do not prove a
-cause. Entry offsets are computed from the reconstructed point origin + s0*dir, which has
+These are correlations in the reference frame. They show where to look; they do not prove
+a cause. Entry offsets are computed from the reconstructed point origin + s0*dir, which has
 its own ~1e-13 mm rounding, so they are a noisy proxy for what the candidate navigator saw.
 """
 import argparse
@@ -973,8 +973,8 @@ def write_md(out, R):
              f"{s['negative']:,} negative steps; weights restore the population. TGeo relocation agrees with the "
              f"scan's volume id for {100 * R['relocation_agreement']:.4f} % of the steps the scan maps "
              f"({100 * R['scan_volume_unmapped_fraction']:.1f} % are unmapped there and located by TGeo only).\n")
-    L.append("These are correlations in the reference (DD4hep/TGeo) frame. Use them to build a repro, then "
-             "confirm with `show_ray.py` / `--debug-ray`.\n")
+    L.append("These are correlations in the reference (DD4hep/TGeo) frame. Confirm them by replaying "
+             "rays with `show_ray.py` / `--debug-ray`.\n")
     L.append("## Mismatch by stratum\n")
     L.append("All positive steps, grouped by reference material → candidate material and reference solid. "
              "Small strata are listed too: a rare failure mode shows up here even when it is too small to "
