@@ -1,93 +1,208 @@
 # simcadval
 
-Validate CAD (STEP) detector geometry against the simulation geometry it is
-meant to replace. The two are compared by **the questions Geant4 asks of
-them**, not by converting one into the other:
+Check that a CAD (STEP) model of a detector is the same geometry as the
+DD4hep simulation geometry, as far as Geant4 can tell. The two are compared
+by **the questions Geant4 asks of a geometry**, not by converting one into
+the other:
 
-1. *"Where is the next boundary along this ray?"* (geantino tracking steps)
+1. *"Where is the next boundary along this ray?"* (geantino tracking)
 2. *"What material am I in?"* (`G4Navigator::LocateGlobalPointAndSetup`)
 
-A DD4hep detector is loaded as a Geant4 world twice: once through DDG4's
-`Geant4Converter` (what `ddsim` runs) and once from a STEP file through
-[G4OCCT](https://github.com/eic/G4OCCT) (`G4OCCTAssemblyVolume`). The same
-deterministic set of geantino rays and points goes through both worlds. If
-the answers agree on a dense sample, the simulation cannot tell the two
-worlds apart.
+The detector is loaded as a Geant4 world twice: once from the DD4hep compact
+file through DDG4 (what `ddsim` runs), and once from the STEP file through
+[G4OCCT](https://github.com/eic/G4OCCT). The same rays and points go through
+both. If the answers agree on a dense sample, the simulation cannot tell the
+two worlds apart. If they disagree, triage says where and under which
+conditions.
 
+## How it works
+
+```mermaid
+flowchart TD
+  C["DD4hep compact XML<br/>reference geometry"]
+  O["check_overlaps.py<br/>reference must be overlap-free"]
+  Q["Same queries for both worlds<br/>ray i and point j depend only on seed and index"]
+  subgraph RC["scripts/run_case.sh"]
+    E["dd4hep2step<br/>export to STEP, read every part back"]
+    S["STEP + materials.xml<br/>or a STEP file from CAD"]
+    A["simcadval_scan --world dd4hep<br/>World A: DDG4 Geant4Converter"]
+    B["simcadval_scan --world step<br/>World B: G4OCCT"]
+    M["compare.py<br/>metrics, plots, mismatch CSVs"]
+  end
+  T["triage.py<br/>rules and failure modes"]
+  R["show_ray.py, simcadval_scan --debug-ray<br/>replay one ray"]
+  C --> O
+  C --> E --> S --> B
+  C --> A
+  Q -.-> A
+  Q -.-> B
+  A --> M
+  B --> M
+  M -->|worlds disagree| T --> R
 ```
-compact.xml ──dd4hep2step──▶ X.step + X.step.materials.xml + export.json
-     │                                   │
-     ▼                                   ▼
-simcadval_scan --world dd4hep    simcadval_scan --world step    (same rays/points)
-     │  dd4hep.{rays,steps,points}.bin   │  step.{rays,steps,points}.bin
-     └───────────────┬───────────────────┘
-                     ▼
-               compare.py ──▶ metrics.json, summary.txt, plots, mismatch CSVs
-                     │
-                     ▼
-               triage.py  ──▶ rules, failure modes, replay commands   (re-reads compact.xml as TGeo)
-```
 
-## Requirements
+## Quick start
 
-DD4hep, Geant4, ROOT, OpenCASCADE, G4OCCT and Python 3 with numpy, scipy
-and matplotlib. All of them ship in the EIC `eic_xl` container. `eic.sh` runs a
-command inside it (needs singularity/apptainer and `/cvmfs`). The image is
-pinned to `eic_xl:26.11.0-stable`; override it with `EIC_IMG=...`.
+Everything needed (DD4hep, Geant4, ROOT, OpenCASCADE, G4OCCT, Python 3 with
+numpy, scipy and matplotlib) ships in the EIC `eic_xl` container. `eic.sh`
+runs a command inside it and needs singularity/apptainer and `/cvmfs`. The
+image is pinned to `eic_xl:26.11.0-stable`; override it with `EIC_IMG=...`.
+All commands run from the repo root.
 
-## Build
+**1. Build** (against the G4OCCT in the container; for another G4OCCT add
+`-DCMAKE_PREFIX_PATH=<its install prefix>`):
 
 ```bash
 ./eic.sh 'cmake -S . -B build && cmake --build build -j'
 ```
 
-This builds against the G4OCCT that ships in the container. To use another
-G4OCCT build, add `-DCMAKE_PREFIX_PATH=<its install prefix>`.
+**2. Smoke test.** Seven thin touching slabs, rotated like an ECal layer. It
+runs in seconds:
 
-## Run
+```bash
+./eic.sh 'scripts/run_case.sh slabs examples/Slabs.xml --rays 20000 --ray-mode aim \
+          --box 1000,1000,1000 --target 1241.8,384.1,0,2,40,150 --points 0'
+```
+
+Expect agreement at floating-point level: `material agreement 0.999999999`,
+`boundary F1 @1nm 1.000000`, `max shift 5.19e-09 mm`.
+
+**3. Example detector.** MiniSiD is a trimmed DD4hep SiD: beampipe, Si vertex
+barrel and 12-stave ECal barrel, with 242 volumes and 139 STEP parts. A full
+run takes about 2 minutes:
 
 ```bash
 ./eic.sh 'scripts/run_case.sh minisid examples/MiniSiD.xml \
           --rays 20000 --ray-mode ip --points 1000000 --box 1450,1450,1800'
 ```
 
-`run_case.sh NAME COMPACT [scan options]` exports the STEP file, scans both
-worlds and compares them. Results go to `out/NAME/`: `summary.txt`, plus
-`cmp/metrics.json`, plots, and `ray_mismatches.csv` / `point_mismatches.csv`.
+With the container's G4OCCT (v0.2.1) the worlds do **not** fully agree:
+`material agreement 0.989515801` (about 1 % of the ray length inside the
+detector), all of it in thin ECal slices that World B reads as Air.
+Meanwhile 1 000 000 of 1 000 000 points agree. That makes this a good case
+for step 4.
 
-Scan options:
-
-| Option | Meaning |
-|---|---|
-| `--rays N` | number of geantino rays |
-| `--ray-mode ip` | isotropic from the origin |
-| `--ray-mode box` | origin uniform in `--box`, isotropic direction |
-| `--ray-mode aim` | origin in `--box`, aimed at a uniform point of `--target cx,cy,cz,hx,hy,hz` |
-| `--points M` | points uniform in `--box hx,hy,hz` (mm) |
-| `--seed S` | ray *i* and point *j* depend only on (seed, index), never on the world |
-
-Environment overrides for `run_case.sh`: `STEP=<file>` (use an existing STEP
-file instead of exporting one), `MATMAP=<file>` (material map for the STEP
-world), `EXPORT_ARGS=...` (extra `dd4hep2step` options), `SCANNER=<exe>`,
-`BUILD=<dir>`, `OUT=<dir>`.
-
-To check the metrics themselves, `EXPORT_ARGS="--perturb <volume>:dx,dy,dz"`
-exports deliberately misplaced CAD.
-
-When the worlds disagree, triage the case:
+**4. Triage** (about 1 minute):
 
 ```bash
 ./eic.sh 'python3 scripts/triage.py out/minisid'
 ```
 
-## Export (`dd4hep2step`)
+Read `out/minisid/cmp/triage/triage.md`. For MiniSiD it finds one rule that
+covers 99.1 % of the mismatching steps on held-out rays: a slab with
+half-thickness ≤ 0.155 mm whose placement is rotated more than 29° off the
+90° grid, at ECal radius. It also finds
+two failure modes (Kapton → Air and Copper → Air), each with ready commands
+to replay a representative ray.
+
+## Reading the results
+
+`run_case.sh` prints `out/NAME/summary.txt`. Its first lines, for the MiniSiD
+run above:
+
+```
+== dd4hep vs step: 20000 rays (ip), 1000000 points
+  material agreement (non-world ray length): 0.989515801   mismatch 3.381e+04 mm of 3.225e+06 mm
+  point material agreement: 1.000000  CI95 0.999996-1.000000  (0 disagree)
+  boundary F1 @1nm 0.871695  @1um 0.871695   max shift 0.575 mm   (n_a=3291071, n_b=3216345)
+  ...
+  worst volumes (mismatch length):
+    slice3@18    IoU 0.686502  mismatch 1793 mm
+```
+
+* **Material agreement** is the headline: the share of ray length inside the
+  detector where both worlds report the same material. Two identical
+  geometries give about 1 − 1e-9 (floating point); anything clearly larger is
+  a real difference.
+* **Point agreement** checks the material at random points. It catches wrong
+  materials and misplaced volumes, but not errors that only occur when a
+  track crosses a surface, which is why rays are needed too (MiniSiD above).
+* **Boundary F1 and max shift** tell a moved boundary from a missing one. A
+  small max shift with F1 near 1 means a displacement of that size. F1 well
+  below 1 means boundaries are missing, and the max shift is then the gap to
+  the next boundary, not a displacement.
+* **Worst volumes** name the parts where the mismatch is, as `<volume>@<id>`.
+
+All metrics are defined under [Metrics](#metrics-comparepy). Machine-readable
+results are in `out/NAME/cmp/metrics.json`, with plots and
+`ray_mismatches.csv` / `point_mismatches.csv` next to it. For a table across
+cases, run `python3 scripts/summarize.py out/*/cmp`.
+
+## Your own geometry
+
+Check the reference for overlaps first. Where DD4hep volumes overlap, the
+reference answer itself is ambiguous:
+
+```bash
+./eic.sh 'python3 scripts/check_overlaps.py my_detector.xml'    # optional 2nd arg: tolerance in cm (default 1e-4)
+```
+
+Then run `run_case.sh NAME COMPACT [scan options]`. It exports the STEP file,
+scans both worlds and compares them, writing to `out/NAME/`.
+
+| Scan option | Meaning |
+|---|---|
+| `--rays N` | number of geantino rays |
+| `--ray-mode ip` | rays isotropic from the origin |
+| `--ray-mode box` | ray origins uniform in `--box`, isotropic directions |
+| `--ray-mode aim` | origins in `--box`, aimed at a uniform point of `--target cx,cy,cz,hx,hy,hz` |
+| `--points M` | points uniform in `--box hx,hy,hz` (half-lengths, mm) |
+| `--seed S` | changes the sample; the same seed gives the same rays and points in both worlds |
+
+Environment variables for `run_case.sh`:
+
+| Variable | Effect |
+|---|---|
+| `STEP=<file>` | use this STEP file instead of exporting one |
+| `MATMAP=<file>` | material map for World B (default `<STEP>.materials.xml`) |
+| `EXPORT_ARGS=...` | extra `dd4hep2step` options, e.g. `--perturb <volume>:dx,dy,dz` to move a volume |
+| `BUILD=<dir>`, `OUT=<dir>`, `SCANNER=<exe>` | build directory, output root, scanner binary |
+
+**STEP from CAD.** A STEP file that was not made by `dd4hep2step` needs a
+G4OCCT material map from its part names to DD4hep material names:
+
+```xml
+<materials>
+  <material stepName="slice3@18" geant4Name="Kapton"/>
+</materials>
+```
+
+Material metrics work with any part names. Volume-level metrics (volume-id
+agreement, worst volumes) need part names in the form `<volume>@<id>`, where
+`<id>` is the DD4hep volume number used by `dd4hep2step` (see
+`export.json`); parts without it count as unmapped.
+
+## Checks
+
+**Metric self-test.** This checks that deliberately wrong CAD is detected and
+localised. It takes about 3 minutes:
+
+```bash
+./eic.sh 'scripts/selftest.sh'        # optional: scan args (default 20000 ip rays, 10^6 points)
+```
+
+It exports MiniSiD once correctly and once with each injected fault, then
+compares each faulty STEP world with the correct STEP world. Both are
+navigated by the same G4OCCT, so G4OCCT's own disagreements with DD4hep are
+the same in both and cancel; only the injected fault remains. It prints PASS
+or FAIL per check, and the exit status is 0 only if all pass.
+
+| Fault | Checks | Result (seed 12345) |
+|---|---|---|
+| inner vertex modules shifted 10 µm in z (`--perturb`) | mismatch only in the two moved parts; max boundary shift within ×0.5–2 of the shift | only `component0@4`, `component1@5`; max shift 0.01037 mm |
+| same, 1 µm | same checks, and the mismatch scales ×5–20 between 10 µm and 1 µm | max shift 0.001037 mm; ratio 10.00 |
+| one Kapton slice prototype read as Copper (edited `materials.xml`) | volume mismatch exactly 0 (geometry untouched); only Kapton and Copper lose IoU; every disagreeing point is Kapton → Copper | 310 points, all Kapton → Copper |
+| none: the DD4hep world scanned in two processes | identical answers | 0 mm mismatch |
+
+## Reference
+
+### Export (`dd4hep2step`)
 
 * A volume becomes a STEP part if its material differs from the world
   material. World-material regions stay empty and resolve to the world on
   import.
 * Each part is its own shape **minus all daughters** (assemblies looked
-  through), so parts never overlap and G4OCCT's flat import is a valid
-  placement.
+  through), so parts never overlap and a flat import is a valid placement.
 * One prototype per `TGeoVolume`, placed by XCAF references (STEP instancing
   → shared logical volumes).
 * Part names are `<volume>@<id>`. The XDE material attribute is the DD4hep
@@ -99,7 +214,7 @@ When the worlds disagree, triage the case:
   as a single solid whose volume matches `TGeoShape::Capacity()`. If any does
   not, the exporter exits with code 4.
 
-## Metrics (`compare.py`)
+### Metrics (`compare.py`)
 
 Ray metrics overlay the two piecewise-constant material functions along each
 ray exactly (the union of both sets of step boundaries), so no along-ray
@@ -120,13 +235,12 @@ so air outside the detector does not dilute them.
 | point agreement | fraction of points with equal material (Wilson 95 % CI), and its confusion matrix |
 | cost | CPU µs per ray and per point in each world |
 
-## Mismatch triage (`triage.py`)
+### Mismatch triage (`triage.py`)
 
 `compare.py` says how much the worlds disagree and where. `triage.py` says
 what the disagreeing places have in common, so that a disagreement can be
-traced to specific parts and conditions. It post-processes the stored scans: there are no new
-scans, and it needs only CPU (numpy, scipy, ROOT/DD4hep). It takes about
-1–2 minutes for a 20 000-ray MiniSiD case.
+traced to specific parts and conditions. It only post-processes the stored
+scans and needs nothing beyond CPU (numpy, scipy, ROOT/DD4hep).
 
 1. **Label.** Each step of the DD4hep world (ray, step index, placed volume)
    is *positive* if the exact overlay shows more than `--min-mm` (1 nm) of
@@ -160,7 +274,7 @@ confirm them with a replay. Options: `--min-mm`, `--neg-ratio`, `--max-pos`,
 `--depth`, `--max-k`, `--min-pos` (below this many positive steps, all of them
 are listed instead of analysed), `--seed`, `--out`, `--no-plots`.
 
-## Layout
+### Layout
 
 | Path | What |
 |---|---|
@@ -171,5 +285,9 @@ are listed instead of analysed), `--seed`, `--out`, `--no-plots`.
 | `scripts/compare.py` | metrics and plots for one case |
 | `scripts/triage.py` | mismatch triage for one case: features, rules, failure modes |
 | `scripts/show_ray.py` | side-by-side step listing of one ray in both worlds |
+| `scripts/selftest.sh` | metric self-test with injected faults |
+| `scripts/check_overlaps.py` | TGeo overlap check of a compact file |
+| `scripts/summarize.py` | markdown table of headline metrics across cases |
 | `examples/MiniSiD.xml` | trimmed DD4hep SiD: beampipe, Si vertex barrel, 12-stave ECal barrel |
+| `examples/Slabs.xml` | seven thin touching rotated slabs (smoke test) |
 | `eic.sh` | runs a command in the `eic_xl` container |

@@ -1,0 +1,68 @@
+<!-- Slabs: seven thin touching slabs (Si | Cu | Kapton | W | Si | Cu | Kapton, 50 um to 2.5 mm thick),
+     rotated 0.3 rad about z and placed about 1.3 m from the axis like an ECal layer. A fast smoke test:
+     DD4hep and STEP should agree to about 1e-9 of the non-world length (run command: README). -->
+<lccdd>
+  <includes>
+    <gdmlFile ref="${DD4hepINSTALL}/DDDetectors/compact/elements.xml"/>
+    <gdmlFile ref="${DD4hepINSTALL}/DDDetectors/compact/materials.xml"/>
+  </includes>
+  <define>
+    <constant name="world_side" value="1500*mm"/>
+    <constant name="world_x" value="world_side"/>
+    <constant name="world_y" value="world_side"/>
+    <constant name="world_z" value="world_side"/>
+  </define>
+  <materials>
+    <material name="TungstenDens24">
+      <D value="17.8" unit="g/cm3"/>
+      <fraction n="0.93" ref="W"/>
+      <fraction n="0.061" ref="Ni"/>
+      <fraction n="0.009" ref="Fe"/>
+    </material>
+  </materials>
+  <display><vis name="V" r="1" g="0" b="0" visible="true"/></display>
+  <detectors>
+    <detector id="1" name="slab1_Silicon" type="DD4hep_BoxSegment" vis="V">
+      <material name="Silicon"/>
+      <box x="0.16*mm" y="50*mm" z="200*mm"/>
+      <position x="1242.090289701548*mm" y="384.2235518928072*mm" z="0*mm"/>
+      <rotation x="0" y="0" z="0.3"/>
+    </detector>
+    <detector id="2" name="slab2_Copper" type="DD4hep_BoxSegment" vis="V">
+      <material name="Copper"/>
+      <box x="0.025*mm" y="50*mm" z="200*mm"/>
+      <position x="1242.267026952036*mm" y="384.27822313103957*mm" z="0*mm"/>
+      <rotation x="0" y="0" z="0.3"/>
+    </detector>
+    <detector id="3" name="slab3_Kapton" type="DD4hep_BoxSegment" vis="V">
+      <material name="Kapton"/>
+      <box x="0.15*mm" y="50*mm" z="200*mm"/>
+      <position x="1242.4342108376331*mm" y="384.3299391672053*mm" z="0*mm"/>
+      <rotation x="0" y="0" z="0.3"/>
+    </detector>
+    <detector id="4" name="slab4_TungstenDens24" type="DD4hep_BoxSegment" vis="V">
+      <material name="TungstenDens24"/>
+      <box x="1.25*mm" y="50*mm" z="200*mm"/>
+      <position x="1244.0869429638203*mm" y="384.8411891247294*mm" z="0*mm"/>
+      <rotation x="0" y="0" z="0.3"/>
+    </detector>
+    <detector id="5" name="slab5_Silicon" type="DD4hep_BoxSegment" vis="V">
+      <material name="Silicon"/>
+      <box x="0.16*mm" y="50*mm" z="200*mm"/>
+      <position x="1245.4339674134876*mm" y="385.2578726161219*mm" z="0*mm"/>
+      <rotation x="0" y="0" z="0.3"/>
+    </detector>
+    <detector id="6" name="slab6_Copper" type="DD4hep_BoxSegment" vis="V">
+      <material name="Copper"/>
+      <box x="0.025*mm" y="50*mm" z="200*mm"/>
+      <position x="1245.6107046639759*mm" y="385.31254385435426*mm" z="0*mm"/>
+      <rotation x="0" y="0" z="0.3"/>
+    </detector>
+    <detector id="7" name="slab7_Kapton" type="DD4hep_BoxSegment" vis="V">
+      <material name="Kapton"/>
+      <box x="0.15*mm" y="50*mm" z="200*mm"/>
+      <position x="1245.7778885495727*mm" y="385.36425989052*mm" z="0*mm"/>
+      <rotation x="0" y="0" z="0.3"/>
+    </detector>
+  </detectors>
+</lccdd>
