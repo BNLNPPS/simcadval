@@ -79,7 +79,9 @@ run takes about 2 minutes:
 With the container's G4OCCT (v0.2.1) the worlds do **not** fully agree:
 `material agreement 0.989515801` (about 1 % of the ray length inside the
 detector), all of it in thin ECal slices that World B reads as Air.
-Meanwhile 1 000 000 of 1 000 000 points agree. That makes this a good case
+Meanwhile 1 000 000 of 1 000 000 points agree. The cause is G4OCCT's handling
+of points on surfaces, reported in
+[eic/G4OCCT#405](https://github.com/eic/G4OCCT/issues/405). It is a good case
 for step 4.
 
 **4. Triage** (about 1 minute):
