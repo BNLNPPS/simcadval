@@ -79,10 +79,14 @@ run takes about 2 minutes:
 With the container's G4OCCT (v0.2.1) the worlds do **not** fully agree:
 `material agreement 0.989515801` (about 1 % of the ray length inside the
 detector), all of it in thin ECal slices that World B reads as Air.
-Meanwhile 1 000 000 of 1 000 000 points agree. The cause is G4OCCT's handling
-of points on surfaces, reported in
-[eic/G4OCCT#405](https://github.com/eic/G4OCCT/issues/405). It is a good case
-for step 4.
+Meanwhile 1 000 000 of 1 000 000 points agree. Random points almost never land
+on a surface, but a track is on one every time it enters a volume. When the
+track enters a thin slab from a touching neighbour, G4OCCT can classify the
+entry point as outside the slab, and the track then crosses the slab as Air
+(reported in [eic/G4OCCT#405](https://github.com/eic/G4OCCT/issues/405)). The
+step boundaries are all in the right places; only the material of those
+steps is wrong. This is why rays are needed as well as points, and it makes
+MiniSiD a good case for step 4.
 
 **4. Triage** (about 1 minute):
 
@@ -121,8 +125,9 @@ run above:
   track crosses a surface, which is why rays are needed too (MiniSiD above).
 * **Boundary F1 and max shift** tell a moved boundary from a missing one. A
   small max shift with F1 near 1 means a displacement of that size. F1 well
-  below 1 means boundaries are missing, and the max shift is then the gap to
-  the next boundary, not a displacement.
+  below 1 means material boundaries are missing, for example a slab read as
+  the material next to it, and the max shift is then the gap to the next
+  boundary, not a displacement.
 * **Worst volumes** name the parts where the mismatch is, as `<volume>@<id>`.
 
 All metrics are defined under [Metrics](#metrics-comparepy). Machine-readable
