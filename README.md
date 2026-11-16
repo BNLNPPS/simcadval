@@ -23,12 +23,15 @@ simcadval_scan --world dd4hep    simcadval_scan --world step    (same rays/point
      └───────────────┬───────────────────┘
                      ▼
                compare.py ──▶ metrics.json, summary.txt, plots, mismatch CSVs
+                     │
+                     ▼
+               triage.py  ──▶ rules, failure modes, replay commands   (re-reads compact.xml as TGeo)
 ```
 
 ## Requirements
 
-DD4hep, Geant4, ROOT, OpenCASCADE, G4OCCT and Python 3 with numpy and
-matplotlib. All of them ship in the EIC `eic_xl` container. `eic.sh` runs a
+DD4hep, Geant4, ROOT, OpenCASCADE, G4OCCT and Python 3 with numpy, scipy
+and matplotlib. All of them ship in the EIC `eic_xl` container. `eic.sh` runs a
 command inside it (needs singularity/apptainer and `/cvmfs`). The image is
 pinned to `eic_xl:26.11.0-stable`; override it with `EIC_IMG=...`.
 
@@ -71,6 +74,12 @@ world), `EXPORT_ARGS=...` (extra `dd4hep2step` options), `SCANNER=<exe>`,
 To check the metrics themselves, `EXPORT_ARGS="--perturb <volume>:dx,dy,dz"`
 exports deliberately misplaced CAD.
 
+When the worlds disagree, triage the case:
+
+```bash
+./eic.sh 'python3 scripts/triage.py out/minisid'
+```
+
 ## Export (`dd4hep2step`)
 
 * A volume becomes a STEP part if its material differs from the world
@@ -111,6 +120,46 @@ so air outside the detector does not dilute them.
 | point agreement | fraction of points with equal material (Wilson 95 % CI), and its confusion matrix |
 | cost | CPU µs per ray and per point in each world |
 
+## Mismatch triage (`triage.py`)
+
+`compare.py` says how much the worlds disagree and where. `triage.py` says
+what the disagreeing places have in common, so that a bug can be reduced to a
+single-solid repro. It post-processes the stored scans: there are no new
+scans, and it needs only CPU (numpy, scipy, ROOT/DD4hep). It takes about
+1–2 minutes for a 20 000-ray MiniSiD case.
+
+1. **Label.** Each step of the DD4hep world (ray, step index, placed volume)
+   is *positive* if the exact overlay shows more than `--min-mm` (1 nm) of
+   material mismatch inside it.
+2. **Sample.** Positive steps are stratified by (reference material →
+   candidate material, solid class), with small strata kept whole, so a rare
+   failure is not drowned out by a common one. Negative steps are sampled at
+   20 per positive. Weights restore the population, and every reported rate
+   is population-weighted.
+3. **Describe.** The compact file is reloaded as TGeo and about 35 generic
+   features are computed for each sampled step. *What* features describe the
+   mechanism: material, solid class, entry face and its owner, incidence
+   angle, face size, solid size, placement rotation, safety, step length.
+   *Where* features describe the location: r, z, φ, η, step index, volume
+   name.
+4. **Analyse.**
+   * Weighted ROC AUC of each single feature.
+   * A depth-4 decision tree trained on even rays and scored on odd rays.
+     Each leaf that predicts mismatch is a readable rule with held-out
+     precision and recall. Rules whose precision is under 80 % get a
+     drill-down tree.
+   * Ward clustering of the positive steps into failure modes. k is chosen by
+     silhouette score, with k = 1 when there is no structure. Each mode comes
+     with a representative ray and ready `show_ray.py` and
+     `simcadval_scan --debug-ray` commands to replay it.
+
+Outputs in `CASE/cmp/triage/`: `triage.md` (the report), `triage.json`,
+`features.csv.gz` (one row per sampled step), `feature_auc.png` and
+`clusters.png`. The rules and modes are correlations in the reference frame;
+confirm them with a replay. Options: `--min-mm`, `--neg-ratio`, `--max-pos`,
+`--depth`, `--max-k`, `--min-pos` (below this many positive steps, all of them
+are listed instead of analysed), `--seed`, `--out`, `--no-plots`.
+
 ## Layout
 
 | Path | What |
@@ -120,5 +169,7 @@ so air outside the detector does not dilute them.
 | `src/geo_ids.hh` | volume numbering shared by the exporter and the scanner |
 | `scripts/run_case.sh` | export → scan ×2 → compare, for one case |
 | `scripts/compare.py` | metrics and plots for one case |
+| `scripts/triage.py` | mismatch triage for one case: features, rules, failure modes |
+| `scripts/show_ray.py` | side-by-side step listing of one ray in both worlds |
 | `examples/MiniSiD.xml` | trimmed DD4hep SiD: beampipe, Si vertex barrel, 12-stave ECal barrel |
 | `eic.sh` | runs a command in the `eic_xl` container |
