@@ -59,6 +59,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <map>
 #include <random>
@@ -519,11 +520,11 @@ int main(int argc, char** argv) {
 
   std::ofstream js(o.out + ".meta.json");
   js << "{\n  \"world\": \"" << o.world << "\", \"compact\": \"" << Esc(o.compact) << "\", \"step\": \""
-     << Esc(o.step) << "\",\n  \"rays\": " << o.rays << ", \"ray_mode\": \"" << o.rayMode
-     << "\", \"target_mm\": [" << o.target[0] << ", " << o.target[1] << ", " << o.target[2] << ", "
+     << Esc(o.step) << "\", \"matmap\": \"" << Esc(o.matmap) << "\",\n  \"rays\": " << o.rays << ", \"ray_mode\": \"" << o.rayMode
+     << "\", \"target_mm\": [" << std::setprecision(17) << o.target[0] << ", " << o.target[1] << ", " << o.target[2] << ", "
      << o.target[3] << ", " << o.target[4] << ", " << o.target[5] << "], \"points\": " << o.points << ", \"seed\": " << o.seed << ",\n  \"box_mm\": [" << o.box[0]
      << ", " << o.box[1] << ", " << o.box[2] << "], \"world_half_mm\": [" << state.worldHalf[0] << ", "
-     << state.worldHalf[1] << ", " << state.worldHalf[2] << "], \"world_material\": \""
+     << state.worldHalf[1] << ", " << state.worldHalf[2] << std::setprecision(6) << "], \"world_material\": \""
      << Esc(state.worldMaterial) << "\",\n  \"init_s\": " << initSec << ", \"rays_s\": " << raySec
      << ", \"points_s\": " << ptSec << ", \"total_steps\": " << state.totalSteps
      << ", \"zero_length_steps\": " << state.stuckSteps << ", \"killed_events\": [";
