@@ -101,6 +101,15 @@ half-thickness ≤ 0.155 mm whose placement is rotated more than 29° off the
 two failure modes (Kapton → Air and Copper → Air), each with ready commands
 to replay a representative ray.
 
+**5. Diagnosis (optional, with [Claude Code](https://claude.com/claude-code)).**
+The repo ships a Claude Code skill, `investigate-mismatch`. Ask Claude Code in
+this directory to "investigate the mismatch in out/minisid". It follows
+`.claude/skills/investigate-mismatch/SKILL.md`: reads the metrics and the
+triage report, replays rays, runs targeted rescans if needed, and writes
+`out/minisid/cmp/diagnosis.md`. That file sorts each finding into placement,
+material, missing part, navigation artifact or no difference, with the
+commands and output lines as evidence.
+
 ## Reading the results
 
 `run_case.sh` prints `out/NAME/summary.txt`. Its first lines, for the MiniSiD
@@ -298,3 +307,4 @@ are listed instead of analysed), `--seed`, `--out`, `--no-plots`.
 | `examples/MiniSiD.xml` | trimmed DD4hep SiD: beampipe, Si vertex barrel, 12-stave ECal barrel |
 | `examples/Slabs.xml` | seven thin touching rotated slabs (smoke test) |
 | `eic.sh` | runs a command in the `eic_xl` container |
+| `.claude/skills/investigate-mismatch/` | Claude Code skill: diagnose a case's mismatch and write `diagnosis.md` |

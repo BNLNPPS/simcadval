@@ -23,7 +23,12 @@ if args.report:
 for pre in (args.a, args.b):
     meta = json.load(open(pre + ".meta.json"))
     mats = [m["name"] for m in meta["materials"]]
-    r = np.fromfile(pre + ".rays.bin", dtype=RAY_DT)[args.evt]
+    rays = np.fromfile(pre + ".rays.bin", dtype=RAY_DT)
+    hit = rays[rays["evt"] == args.evt]  # by ray number, not position: hung rays leave gaps
+    if len(hit) == 0:
+        print(f"== {pre}: ray {args.evt} not in this scan (hung or out of range)")
+        continue
+    r = hit[0]
     st = np.fromfile(pre + ".steps.bin", dtype=STEP_DT)
     st = st[st["evt"] == args.evt]
     print(f"== {pre} [{meta['world']}] evt {args.evt} origin ({r['ox']:.3f},{r['oy']:.3f},{r['oz']:.3f}) "
