@@ -66,7 +66,11 @@ one there.
    A `perturb` entry in `export` means the STEP was moved on purpose; report
    it.
 2. `mismatch_families` (default `min_mm` 1e-6 mm). Every family needs an
-   explanation, including tiny ones. Families that mirror each other
+   explanation, including tiny ones. Rounding is below 1e-7 mm and the
+   tools already drop it: a family whose ends are offset by 1e-6 mm or
+   more is real geometry, however small its share. A `one_end_each` family
+   is a placement (or size) finding with a measured D, never "precision",
+   and does not go in `unexplained`. Families that mirror each other
    (`Carbon -> Air` in a part and `Air -> Carbon` next to it) are one
    finding. If points disagree, `point_mismatches`.
 3. Per family, check the category with the tools in the table, starting
