@@ -1186,9 +1186,20 @@ def coerce(name, args):
                 out[k] = json.loads(v) if isinstance(v, str) else v
             else:
                 out[k] = str(v)
+                if "enum" in props[k] and out[k] not in props[k]["enum"]:
+                    alias = ENUM_ALIASES.get(k, {}).get(out[k].strip().lower())
+                    if alias is None:
+                        raise ValueError(f"{out[k]!r} is not one of {props[k]['enum']}")
+                    out[k] = alias
         except (ValueError, TypeError) as e:
             raise ToolError(f"argument {k}: {e}") from None
     return out
+
+
+# Other names agents use for enum values; anything else outside the enum is an error. Without this check
+# gpt-oss sent world="B" to debug_ray, the scanner silently found nothing, and 13 calls were lost
+# (docs/agent-eval.md).
+ENUM_ALIASES = {"world": {"a": "dd4hep", "b": "step", "dd4hep": "dd4hep", "step": "step"}}
 
 
 def parse_flags(name, argv):
