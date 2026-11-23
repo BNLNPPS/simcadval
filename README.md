@@ -122,6 +122,11 @@ It lands in `out/minisid/cmp/diagnosis.json` (checked against
 `schemas/diagnosis.schema.json`) and `diagnosis.md`, with every claim citing
 the tool call that shows it.
 
+`scripts/ollama_agent.py` runs the same procedure with a local model, and
+`scripts/grade.py` scores a diagnosis against a known answer.
+[docs/agent-eval.md](docs/agent-eval.md) has the runs so far (Claude Code
+6/6, best local model 5/6) and why the skill and tools changed after them.
+
 ## Reading the results
 
 `run_case.sh` prints `out/NAME/summary.txt`. Its first lines, for the MiniSiD
@@ -362,6 +367,9 @@ B's material), confidence, explanation, and evidence as
 | `scripts/svtool.py` | investigation tools (JSON in, JSON out) and the diagnosis checker/renderer |
 | `schemas/diagnosis.schema.json` | the diagnosis format |
 | `.claude/skills/investigate-mismatch/` | Claude Code skill: diagnose a case with the tools and submit the diagnosis |
+| `scripts/ollama_agent.py` | the same procedure with a local model (Ollama) |
+| `scripts/grade.py` | scores a diagnosis against a known answer |
+| `docs/agent-eval.md` | agent runs so far, and why the skill and tools changed |
 
 ## License
 
