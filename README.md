@@ -113,14 +113,14 @@ every mismatch family of the case, and what its boundaries say about the cause:
 scripts/svtool.py mismatch_families --case out/minisid
 ```
 
-The repo also ships a Claude Code skill, `investigate-mismatch`. Ask
-[Claude Code](https://claude.com/claude-code) in this directory to "investigate
-the mismatch in out/minisid". It follows
-`.claude/skills/investigate-mismatch/SKILL.md`: reads the metrics and the
-triage report, replays rays, runs targeted rescans if needed, and writes
-`out/minisid/cmp/diagnosis.md`. That file sorts each finding into placement,
-material, missing part, navigation artifact or no difference, with the
-commands and output lines as evidence.
+With [Claude Code](https://claude.com/claude-code), ask in this directory to
+"investigate the mismatch in out/minisid". The skill
+`.claude/skills/investigate-mismatch/SKILL.md` drives the tools, sorts each
+finding into placement, material, missing part, extra part, navigation
+artifact, no difference or unclear, measures it, and submits the result.
+It lands in `out/minisid/cmp/diagnosis.json` (checked against
+`schemas/diagnosis.schema.json`) and `diagnosis.md`, with every claim citing
+the tool call that shows it.
 
 ## Reading the results
 
@@ -361,7 +361,7 @@ B's material), confidence, explanation, and evidence as
 | `eic.sh` | runs a command in the `eic_xl` container |
 | `scripts/svtool.py` | investigation tools (JSON in, JSON out) and the diagnosis checker/renderer |
 | `schemas/diagnosis.schema.json` | the diagnosis format |
-| `.claude/skills/investigate-mismatch/` | Claude Code skill: diagnose a case's mismatch and write `diagnosis.md` |
+| `.claude/skills/investigate-mismatch/` | Claude Code skill: diagnose a case with the tools and submit the diagnosis |
 
 ## License
 

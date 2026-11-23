@@ -1,119 +1,124 @@
 ---
 name: investigate-mismatch
-description: Diagnose why the DD4hep and STEP worlds of a simcadval case disagree. Use when asked to investigate, explain or diagnose a mismatch in an out/NAME case (after run_case.sh), or what triage found. Replays rays, runs targeted rescans and writes out/NAME/cmp/diagnosis.md with the evidence.
+description: Diagnose why the DD4hep and STEP worlds of a simcadval case disagree. Use when asked to investigate, explain or diagnose a mismatch in an out/NAME case (after run_case.sh), or what triage found. Uses the svtool investigation tools and submits a checked diagnosis (out/NAME/cmp/diagnosis.json and diagnosis.md).
 ---
 
 # Investigate a simcadval mismatch
 
 Goal: for one case directory `out/NAME` (made by `scripts/run_case.sh`), say
-**what** differs between World A (DD4hep) and World B (STEP via G4OCCT),
-**where** (which parts), **by how much**, and show the evidence. Write the
-result to `out/NAME/cmp/diagnosis.md`.
+**what** differs between World A (DD4hep, the reference) and World B (STEP
+via G4OCCT), **where** (which parts), **by how much**, with evidence, and
+submit it as a diagnosis.
 
-Scope: diagnose the comparison; do not debug G4OCCT. When the cause is G4OCCT
-navigation, classify it as a navigation artifact, give the evidence and stop.
-Do not edit sources, examples or G4OCCT, and do not build other G4OCCT
-versions. Write only under `out/NAME/` (rescans and scratch scripts go in
-`out/NAME/investigation/`).
+## Tools
 
-Run everything from the repo root inside the container: wrap every command,
-including the ones triage prints bare (`python3 …`, `${SCANNER:-…} …`), as
-`./eic.sh '<command>'` with single quotes. If `build/` has no
-`simcadval_scan`, build first (README, Quick start).
+All work goes through the svtool tools. Each returns one JSON object and is
+logged with a call id (`c001`, `c002`, ...); the diagnosis cites these ids.
+
+- From a shell (Claude Code): `scripts/svtool.py TOOL --arg value ...` from the
+  repo root (it enters the container itself). Lists: `--parts a,b`; vectors:
+  `--target cx,cy,cz,hx,hy,hz`; the diagnosis: `--diagnosis @file.json`.
+- As functions (agent harness): the same names and arguments;
+  `scripts/svtool.py spec` prints the definitions.
+
+| Tool | Use |
+|---|---|
+| `case_summary` | headline, worst parts, robustness, export status, `no_difference_test` |
+| `mismatch_families` | every mismatch family with share, parts, region, examples and `boundary_pattern` |
+| `point_mismatches` | points with different materials, grouped |
+| `ray` | one ray, both worlds side by side, with which world has a boundary where |
+| `debug_ray` | what each nearby STEP part answers along one ray |
+| `material_map` | STEP material map vs DD4hep materials |
+| `part_info` | a part's export record and placements (centres and sizes for rescans) |
+| `boundary_shifts` | how far a part's boundaries moved; fits the displacement D |
+| `rescan` | aimed rescan of one region; the result is a case for every tool |
+| `triage` | statistical rules and failure modes (slow the first time) |
+| `submit_diagnosis` | check and write the diagnosis |
+
+Scope: diagnose the comparison, do not debug G4OCCT. Do not edit sources,
+examples or G4OCCT. Everything you produce goes through the tools.
 
 ## Categories
 
-Every finding gets exactly one:
+Each finding gets exactly one category. The `boundary_pattern` of a
+mismatch family (from `mismatch_families`) is the first sorting signal:
 
-| Category | What it means | Typical evidence |
+| Category | Pattern | Confirm with |
 |---|---|---|
-| placement | a part is shifted, rotated or the wrong size in the CAD | same material sequence, one boundary offset at that part by an amount consistent across rays (see step 7); with no other family present also a low IoU for that part and boundary F1 near 1 |
-| material | a part has the wrong material in World B | identical step boundaries; the part's material differs on whole steps; points disagree with the same pair (e.g. Kapton -> Copper); volume-id agreement unaffected; the map entry for that part differs from its DD4hep material |
-| missing part | a part is absent from World B | the part's material never appears in B along rays or at points where A has it; `--debug-ray` finds no part there; check `export.json` status |
-| navigation artifact | the STEP shapes are right but G4OCCT navigates them wrongly | rays disagree while points agree; whole steps lost on entry through a face (often B reads the world material, e.g. Air); step boundaries unchanged. Known case: thin touching slabs, eic/G4OCCT#405 |
-| no difference | worlds agree at floating-point level | 1 - material agreement below about 1e-8, no point disagreements, boundary F1 @1nm = 1 |
-| unclear | evidence does not separate the categories | say what was tried and what would settle it |
+| `navigation_artifact`: B's shapes are right, G4OCCT navigates them wrongly | `same_boundaries`; B has the world material where A has a part's material; points agree | `debug_ray` on an example: the part answers `outside` with safety 0 on its own entry face; `material_map` entry correct. Known case: thin touching slabs, eic/G4OCCT#405 |
+| `material`: a part has the wrong material in B | `same_boundaries`; B has another real material | `material_map` differences; `point_mismatches` show the same pair |
+| `placement`: a part is shifted, rotated or the wrong size in B | `one_end_each` | `boundary_shifts` for the part: D from the fit |
+| `missing_part`: a part of A is absent in B | `only_in_a` | `part_info` (export status, read-back); `debug_ray` finds no part there |
+| `extra_part`: B has a part A lacks | `only_in_b` | `debug_ray` names the part |
+| `no_difference` | `case_summary` `no_difference_test.passes` | nothing else needed |
+| `unclear` | `mixed`, or evidence that does not separate categories | say what would settle it |
 
-One case can hold several families, e.g. a CAD fault on top of the navigation
-artifact. Diagnose each family separately. Global numbers (worst volumes,
-boundary F1, max boundary shift, nearest-boundary percentiles) mix all
-families, so a large family hides a small one there: measure each family on
-its own rays.
+A case can hold several families with different causes (e.g. a CAD fault
+on top of the navigation artifact). Diagnose each family on its own: the
+global numbers in `case_summary` mix them, and a large family hides a small
+one there.
 
 ## Procedure
 
-1. **Read the headline and the case's files.** `out/NAME/summary.txt`, then
-   `out/NAME/cmp/metrics.json`: material agreement, point disagreements and
-   their pairs, worst volumes, and robustness fields (`rays_missing`, `hung`,
-   `killed_events`, `g4_exceptions` under `a`/`b`). Check `export.log` and
-   `export.json`: a `perturb` entry means the STEP was moved on purpose by
-   `dd4hep2step --perturb`; report it. Other comparison outputs in the case
-   directory (e.g. `cmp_*`) are valid evidence; name them if you use them.
-   If the "no difference" row fits, write that and stop.
-2. **Triage.** If `out/NAME/cmp/triage/triage.md` is missing, run
-   `python3 scripts/triage.py out/NAME`. Its strata table lists every family
-   (reference material -> candidate material, steps, share of length),
-   including tiny ones. Its failure modes cover only the large families; each
-   has a representative ray with ready `show_ray.py` and `--debug-ray`
-   commands.
-3. **Get a ray for every family**, including strata without a mode. For
-   those, take rays from `out/NAME/cmp/triage/features.csv.gz` (one row per
-   sampled step): rows with `label` = 1 (mismatching) and the stratum's
-   `material` -> `material_b`; `evt` is the ray, `s0_mm` and `len_mm` the
-   step, `volume`, `r`, `z`, `phi` where it is. (`cmp/ray_mismatches.csv`
-   keeps only the 5000 longest intervals, so small families are usually
-   missing from it.) Replay with
-   `python3 scripts/show_ray.py out/NAME/dd4hep out/NAME/step EVT SMIN SMAX --report out/NAME/export.json`
-   (s range = the step ± 1 mm). Note whether boundaries match and only the
-   material differs, whether a boundary is offset (by how much), or whether a
-   part is absent.
-4. **Ask the parts.** Run the `--debug-ray` command (from triage, or the same
-   form with your ray and s range). It writes no files. Geant4 prints about
-   1400 lines first; keep the useful part with `| awk '/^s=/{p=1} p'`. It
-   lists the STEP parts near each step point and what their solids answer
-   (`Inside`, safety, distances in and out). A part answering `outside` with
-   safety 0 on its own face also happens where B enters correctly, so compare
-   a failing ray with one that enters the same kind of part correctly before
-   drawing a conclusion.
-5. **Check the material map** for any material finding. The map is
-   `<STEP>.materials.xml` (STEP path in `out/NAME/step.meta.json`), or
-   `out/NAME/materials.xml` when one exists there (the case was run with
-   `MATMAP=`). Compare the part's entry (`stepName="<part>"`) with its
-   DD4hep material in `out/NAME/export.json` (or the export report next to
-   the STEP file).
-6. **Confirm with a targeted rescan** when one ray is not enough (to measure
-   a shift, or to check that a pattern holds across a part). Aim rays at the
-   part, reusing the case's STEP file and map:
-   `OUT=out/NAME/investigation STEP=<step> [MATMAP=<map>] scripts/run_case.sh zoomK <compact> --rays 10000 --ray-mode aim --box <hx,hy,hz> --target <cx,cy,cz,hx,hy,hz> --points 0`.
-   In aim mode `--box` (half-lengths, mm) is where rays start and `--target`
-   (centre and half-lengths, mm) is the box they aim at; take the target from
-   replay positions or the part's placement. Keep each rescan at 20 000 rays
-   or fewer. With `--points 0`, compare.py prints "Mean of empty slice"
-   warnings and `nan` point agreement; ignore them.
-7. **Measure magnitudes per family.** For placement: a face with unit normal
-   n moved by a displacement D shifts the boundary along a ray with direction
-   u by Δs = (D·n)/(u·n), so Δs·(u·n) is the same for every ray through that
-   face. Compute it over many rays per face (from a rescan) rather than from
-   the global max boundary shift, which a lost boundary or a corner clip
-   inflates. Small analysis scripts may go in `out/NAME/investigation/`;
-   read scans with `numpy.fromfile(prefix + ".steps.bin", dtype=STEP_DT)`
-   and `RAY_DT`, both defined in `scripts/compare.py` (material names are
-   in `<prefix>.meta.json`). For material: the affected length and the map
-   entry. For a navigation artifact: the share of the mismatch length and
-   the solid types and thicknesses involved.
-8. **Write `out/NAME/cmp/diagnosis.md`:**
-   - first line: the verdict in one sentence;
-   - a table with one row per finding: category, parts (`<volume>@<id>`),
-     magnitude, share of mismatch length, confidence (high / medium / low);
-   - per finding, the evidence: each command run and the output lines that
-     show it;
-   - what is not explained, and what would settle it.
+1. `case_summary`. If `no_difference_test.passes`, submit one
+   `no_difference` finding (parts `[]`, share 0) and stop. Note robustness
+   problems (hung or killed rays, Geant4 exceptions) and failed export parts.
+   A `perturb` entry in `export` means the STEP was moved on purpose; report
+   it.
+2. `mismatch_families` (default `min_mm` 1e-6 mm). Every family needs an
+   explanation, including tiny ones. Families that mirror each other
+   (`Carbon -> Air` in a part and `Air -> Carbon` next to it) are one
+   finding. If points disagree, `point_mismatches`.
+3. Per family, check the category with the tools in the table, starting
+   from the family's `examples` (each has `evt` and `s_range_mm`):
+   `ray --evt EVT --smin .. --smax ..` and `debug_ray` with a range of at
+   most 20 mm around the interval. For a navigation artifact, compare a
+   failing entry with one where B enters the same kind of part correctly
+   before concluding.
+4. Measure each finding:
+   - placement: `boundary_shifts --part NAME@ID` (or `NAME@*` for all
+     copies). If it has fewer than about 10 shifted boundaries, get the
+     part's placements with `part_info`, `rescan` aimed at the part
+     (target = a placement's `bbox_centre_mm` and `bbox_half_mm`, a few
+     thousand rays), then `boundary_shifts` on the rescan case
+     (`out/NAME/investigation/RESCAN`). D is measured only along
+     `determined_along`; say so when the faces seen do not fix all of D. A
+     large translation residual means a size change or rotation (see
+     `faces` and `rigid`), or copies moved differently (`per_placement`).
+   - material: affected parts and their map material.
+   - navigation artifact: the share of the mismatch and the solids involved
+     (shape, thickness from `debug_ray` local bounding boxes).
+   - share of mismatch: the family `share` values (sum the families of one
+     finding).
+5. `triage` only when families are large and their cause is still open:
+   its rules and modes are correlations; confirm them with a replay.
+6. `submit_diagnosis` with:
+   ```json
+   {"schema": "simcadval-diagnosis/1", "case": "out/NAME",
+    "verdict": "one sentence",
+    "findings": [{"category": "placement", "parts": ["component0@4"],
+                  "materials": {"a": "Carbon", "b": "Air"},
+                  "share_of_mismatch": 0.4,
+                  "magnitude": {"summary": "D = (0, 0, +0.010) mm",
+                                "displacement_mm": [0, 0, 0.010]},
+                  "confidence": "high",
+                  "explanation": "why this category, and what rules out the others",
+                  "evidence": [{"call": "c004", "shows": "boundary_pattern one_end_each"}]}],
+    "unexplained": {"share_of_mismatch": 0.0, "notes": ""},
+    "next_steps": []}
+   ```
+   Parts are `name@id` (from the tools' output) or `name@*` for every
+   part of that name. If the result has `ok: false`, fix every listed error
+   and submit again. Then report the verdict and the path of
+   `diagnosis.md`.
 
 ## Rules
 
-- Every claim cites output from a command you ran in this investigation.
-  Triage rules and modes are correlations: confirm them with a replay.
-- Do not report a cause you have not shown. Use "unclear" instead.
+- Every claim cites a call id whose output shows it; quote the values in
+  `shows`.
+- Do not report a cause you have not shown: use `unclear` and say what
+  would settle it.
+- At most 3 rescans per investigation, each 20000 rays or fewer.
 - Keep G4OCCT internals out of the diagnosis beyond the observed answers of
-  its solids; for a navigation artifact, point to a matching known issue
-  (eic/G4OCCT#405) or say that it looks new.
+  its solids; for a navigation artifact, point to eic/G4OCCT#405 when it
+  matches, or say that it looks new.
